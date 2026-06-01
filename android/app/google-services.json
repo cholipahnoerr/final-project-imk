@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "843028441897",
+    "project_id": "hayyarabic",
+    "storage_bucket": "hayyarabic.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:843028441897:android:f7cee3ebf7ece5329ea538",
+        "android_client_info": {
+          "package_name": "com.hayyarabic.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDphpUgk5Rb2_2wfLvA3yH7FWE42DyFX9U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
