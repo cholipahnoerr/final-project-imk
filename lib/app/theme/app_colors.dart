@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
 abstract final class AppColors {
-  // Primary — Terracotta/Warm Orange
-  static const Color primary = Color(0xFFD95E38);
-  static const Color primaryLight = Color(0xFFE8825E);
-  static const Color primaryDark = Color(0xFFB04020);
+  // Primary — Terracotta/Warm Brown (matches Figma)
+  static const Color primary = Color(0xFFBF6B3D);
+  static const Color primaryLight = Color(0xFFD4956F);
+  static const Color primaryDark = Color(0xFF8F4A1E);
 
   // Background — Krem/Off-white
   static const Color background = Color(0xFFFFF8F0);

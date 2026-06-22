@@ -1,31 +1,25 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/services/auth_service.dart';
 import '../../../data/models/stream_content_model.dart';
 
-class StreamState {
-  const StreamState({
-    required this.wordOfDay,
-    required this.triviaList,
-  });
-
-  final WordOfDay wordOfDay;
-  final List<CultureTrivia> triviaList;
-}
-
-// Static content provider — Sprint 6 can swap to a Firestore StreamProvider
-final streamStateProvider = Provider<StreamState>((ref) {
-  return StreamState(
-    wordOfDay: StreamContent.wordOfDay,
-    triviaList: StreamContent.triviaList,
-  );
+// Kata hari ini — otomatis berdasarkan scheduledDate, fallback ke terbaru
+final wordOfDayProvider = StreamProvider<WordOfDay?>((ref) {
+  return ref.watch(firestoreDataSourceProvider).watchTodayWord();
 });
 
-// Convenience providers consumed by detail screens
-final wordOfDayProvider = Provider<WordOfDay>((ref) {
-  return ref.watch(streamStateProvider).wordOfDay;
+// Watch daftar trivia dari Firestore
+final triviasProvider = StreamProvider<List<CultureTrivia>>((ref) {
+  return ref.watch(firestoreDataSourceProvider).watchTrivias();
 });
 
+// Social posts tetap static
+final socialPostsProvider = Provider<List<SocialPost>>((ref) {
+  return StreamContent.socialPosts;
+});
+
+// Provider lama untuk backward compat detail screens
 final cultureTriviaProvider = Provider.family<CultureTrivia?, String>((ref, id) {
-  final list = ref.watch(streamStateProvider).triviaList;
+  final list = ref.watch(triviasProvider).valueOrNull ?? [];
   try {
     return list.firstWhere((t) => t.id == id);
   } catch (_) {

@@ -1,301 +1,328 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/services/auth_service.dart';
+import '../../../data/models/chat_message_model.dart';
+import '../../../data/models/user_model.dart';
+import '../home/home_viewmodel.dart';
+import 'talk_viewmodel.dart';
 
-// Static mock partner list — Sprint 6 replaces with Firestore query
-class _Partner {
-  const _Partner({
-    required this.id,
-    required this.name,
-    required this.lastMessage,
-    required this.time,
-    this.unread = 0,
-    this.isOnline = false,
-    this.level = 'Pemula',
-  });
-  final String id;
-  final String name;
-  final String lastMessage;
-  final String time;
-  final int unread;
-  final bool isOnline;
-  final String level;
-}
-
-const _mockPartners = [
-  _Partner(
-    id: 'user-0',
-    name: 'Ahmad Fauzi',
-    lastMessage: 'مرحبا! أهلاً وسهلاً',
-    time: '10:32',
-    unread: 2,
-    isOnline: true,
-    level: 'Menengah',
-  ),
-  _Partner(
-    id: 'user-1',
-    name: 'Siti Rahayu',
-    lastMessage: 'شكراً على المساعدة',
-    time: '09:15',
-    unread: 0,
-    isOnline: true,
-    level: 'Pemula',
-  ),
-  _Partner(
-    id: 'user-2',
-    name: 'Budi Santoso',
-    lastMessage: 'كيف حالك؟',
-    time: 'Kemarin',
-    unread: 0,
-    isOnline: false,
-    level: 'Lanjutan',
-  ),
-  _Partner(
-    id: 'user-3',
-    name: 'Dewi Lestari',
-    lastMessage: 'ممتاز! أفهم الآن',
-    time: 'Kemarin',
-    unread: 1,
-    isOnline: false,
-    level: 'Pemula',
-  ),
-  _Partner(
-    id: 'user-4',
-    name: 'Reza Pratama',
-    lastMessage: 'إلى اللقاء!',
-    time: 'Sen',
-    unread: 0,
-    isOnline: false,
-    level: 'Menengah',
-  ),
-];
-
-class TalkScreen extends StatelessWidget {
+class TalkScreen extends ConsumerWidget {
   const TalkScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userAsync = ref.watch(currentUserProvider);
+    final conversationsAsync = ref.watch(conversationsProvider);
+    final myUid = ref.watch(firebaseAuthProvider).currentUser?.uid ?? '';
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Bincang'),
         backgroundColor: AppColors.background,
         surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        leadingWidth: 80,
+        leading: userAsync.when(
+          data: (user) => Padding(
+            padding: const EdgeInsets.only(left: 16),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.local_fire_department_rounded, color: AppColors.streak, size: 22),
+              const SizedBox(width: 3),
+              Text('${user?.currentStreak ?? 0}',
+                  style: AppTypography.titleMedium
+                      .copyWith(color: AppColors.streak, fontWeight: FontWeight.w800)),
+            ]),
+          ),
+          loading: () => const SizedBox.shrink(),
+          error: (_, _) => const SizedBox.shrink(),
+        ),
+        title: Text('Bincang',
+            style: AppTypography.titleLarge
+                .copyWith(color: AppColors.primary, fontWeight: FontWeight.w800)),
+        centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.search_rounded),
-            onPressed: () {},
+          userAsync.when(
+            data: (user) => Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Text('${user?.gems ?? 0}',
+                    style: AppTypography.titleMedium
+                        .copyWith(color: AppColors.gems, fontWeight: FontWeight.w800)),
+                const SizedBox(width: 3),
+                Icon(Icons.diamond_rounded, color: AppColors.gems, size: 20),
+              ]),
+            ),
+            loading: () => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
           ),
         ],
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Online partners strip
-          _OnlineStrip(partners: _mockPartners.where((p) => p.isOnline).toList()),
-          const Divider(height: 1),
-          // Conversation list
-          Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: _mockPartners.length,
-              separatorBuilder: (_, __) =>
-                  const Divider(height: 1, indent: 80, endIndent: 16),
-              itemBuilder: (context, index) {
-                final partner = _mockPartners[index];
-                return _ConversationTile(
-                  partner: partner,
-                  onTap: () => context.push('/talk/chat/${partner.id}'),
-                );
-              },
-            ),
-          ),
-        ],
+      body: conversationsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+        error: (_, _) => Center(
+          child: Text('Gagal memuat percakapan',
+              style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary)),
+        ),
+        data: (conversations) {
+          if (conversations.isEmpty) {
+            return _EmptyState(onFindPartner: () => _showFindPartnerSheet(context, ref));
+          }
+          return ListView.separated(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemCount: conversations.length,
+            separatorBuilder: (_, _) =>
+                const Divider(height: 1, indent: 80, endIndent: 16),
+            itemBuilder: (context, index) {
+              final conv = conversations[index];
+              return _ConversationTile(
+                conversation: conv,
+                myUid: myUid,
+                onTap: () => context.push(
+                  '/talk/chat/${conv.partnerIdFor(myUid)}',
+                  extra: {'partnerName': conv.partnerNameFor(myUid)},
+                ),
+              );
+            },
+          );
+        },
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.primary,
-        onPressed: () {
-          _showFindPartnerSheet(context);
-        },
+        onPressed: () => _showFindPartnerSheet(context, ref),
         child: const Icon(Icons.person_add_rounded, color: Colors.white),
       ),
     );
   }
 }
 
-class _OnlineStrip extends StatelessWidget {
-  const _OnlineStrip({required this.partners});
-  final List<_Partner> partners;
+// ─── Empty state ──────────────────────────────────────────────────────────────
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.onFindPartner});
+  final VoidCallback onFindPartner;
 
   @override
   Widget build(BuildContext context) {
-    if (partners.isEmpty) return const SizedBox.shrink();
-    return SizedBox(
-      height: 88,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        itemCount: partners.length,
-        itemBuilder: (context, i) {
-          final p = partners[i];
-          return GestureDetector(
-            onTap: () => context.push('/talk/chat/${p.id}'),
-            child: Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: Column(
-                children: [
-                  Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: 26,
-                        backgroundColor: AppColors.primary.withValues(alpha: 0.12),
-                        child: Text(
-                          p.name[0],
-                          style: AppTypography.titleLarge.copyWith(color: AppColors.primary),
-                        ),
-                      ),
-                      Positioned(
-                        right: 0,
-                        bottom: 0,
-                        child: Container(
-                          width: 12,
-                          height: 12,
-                          decoration: BoxDecoration(
-                            color: AppColors.success,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: AppColors.background, width: 2),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    p.name.split(' ').first,
-                    style: AppTypography.bodySmall,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.chat_bubble_outline_rounded, size: 64, color: AppColors.textMuted),
+          const SizedBox(height: 16),
+          Text('Belum ada percakapan',
+              style: AppTypography.titleMedium.copyWith(color: AppColors.textSecondary)),
+          const SizedBox(height: 8),
+          Text('Temukan teman belajar dan mulai chat',
+              style: AppTypography.bodyMedium.copyWith(color: AppColors.textMuted)),
+          const SizedBox(height: 24),
+          FilledButton.icon(
+            onPressed: onFindPartner,
+            icon: const Icon(Icons.person_search_rounded),
+            label: const Text('Cari Teman'),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+          ),
+        ],
       ),
     );
   }
 }
 
+// ─── Conversation Tile ────────────────────────────────────────────────────────
+
 class _ConversationTile extends StatelessWidget {
-  const _ConversationTile({required this.partner, required this.onTap});
-  final _Partner partner;
+  const _ConversationTile({
+    required this.conversation,
+    required this.myUid,
+    required this.onTap,
+  });
+  final ChatConversation conversation;
+  final String myUid;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final partnerName = conversation.partnerNameFor(myUid);
+    final lastMsg = conversation.lastMessageType == 'voice'
+        ? '🎵 Voice note'
+        : conversation.lastMessage;
+    final time = _formatTime(conversation.lastMessageTime);
+
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      leading: Stack(
-        children: [
-          CircleAvatar(
-            radius: 24,
-            backgroundColor: AppColors.surfaceVariant,
-            child: Text(
-              partner.name[0],
-              style: AppTypography.titleLarge.copyWith(color: AppColors.textSecondary),
-            ),
-          ),
-          if (partner.isOnline)
-            Positioned(
-              right: 0,
-              bottom: 0,
-              child: Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: AppColors.success,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.background, width: 2),
-                ),
-              ),
-            ),
-        ],
+      leading: CircleAvatar(
+        radius: 24,
+        backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+        child: Text(
+          partnerName.isNotEmpty ? partnerName[0].toUpperCase() : '?',
+          style: AppTypography.titleLarge.copyWith(color: AppColors.primary),
+        ),
       ),
-      title: Row(
-        children: [
-          Expanded(
-            child: Text(
-              partner.name,
-              style: AppTypography.titleMedium.copyWith(
-                fontWeight: partner.unread > 0 ? FontWeight.w700 : FontWeight.w600,
-              ),
-            ),
-          ),
-          Text(
-            partner.time,
-            style: AppTypography.bodySmall.copyWith(
-              color: partner.unread > 0 ? AppColors.primary : AppColors.textMuted,
-              fontWeight: partner.unread > 0 ? FontWeight.w600 : FontWeight.normal,
-            ),
-          ),
-        ],
+      title: Text(
+        partnerName,
+        style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w600),
       ),
-      subtitle: Row(
-        children: [
-          Expanded(
-            child: Text(
-              partner.lastMessage,
-              style: AppTypography.arabicMedium.copyWith(
-                fontSize: 13,
-                color: partner.unread > 0 ? AppColors.textPrimary : AppColors.textSecondary,
-                fontWeight: partner.unread > 0 ? FontWeight.w600 : FontWeight.normal,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          if (partner.unread > 0)
-            Container(
-              margin: const EdgeInsets.only(left: 6),
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                '${partner.unread}',
-                style: AppTypography.bodySmall.copyWith(color: Colors.white, fontSize: 11),
-              ),
-            ),
-        ],
+      subtitle: Text(
+        lastMsg,
+        style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      trailing: Text(
+        time,
+        style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted),
       ),
       onTap: onTap,
     );
   }
+
+  String _formatTime(DateTime dt) {
+    final now = DateTime.now();
+    if (dt.year == now.year && dt.month == now.month && dt.day == now.day) {
+      return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    }
+    final yesterday = now.subtract(const Duration(days: 1));
+    if (dt.year == yesterday.year && dt.month == yesterday.month && dt.day == yesterday.day) {
+      return 'Kemarin';
+    }
+    return '${dt.day}/${dt.month}';
+  }
 }
 
-void _showFindPartnerSheet(BuildContext context) {
+// ─── Find Partner Bottom Sheet ────────────────────────────────────────────────
+
+void _showFindPartnerSheet(BuildContext context, WidgetRef ref) {
   showModalBottomSheet(
     context: context,
+    isScrollControlled: true,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
-    builder: (_) => Padding(
-      padding: const EdgeInsets.all(24),
+    builder: (ctx) => _FindPartnerSheet(
+      onSelected: (user) {
+        Navigator.pop(ctx);
+        context.push('/talk/chat/${user.uid}',
+            extra: {'partnerName': user.displayName});
+      },
+    ),
+  );
+}
+
+class _FindPartnerSheet extends ConsumerStatefulWidget {
+  const _FindPartnerSheet({required this.onSelected});
+  final void Function(UserModel user) onSelected;
+
+  @override
+  ConsumerState<_FindPartnerSheet> createState() => _FindPartnerSheetState();
+}
+
+class _FindPartnerSheetState extends ConsumerState<_FindPartnerSheet> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final searchAsync = ref.watch(userSearchProvider);
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 24, right: 24, top: 24,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Temukan Partner Belajar', style: AppTypography.headlineMedium),
-          const SizedBox(height: 8),
-          Text(
-            'Fitur pencarian partner akan tersedia segera.',
-            style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+          const SizedBox(height: 4),
+          Text('Ketik email pengguna untuk memulai percakapan',
+              style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted)),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            keyboardType: TextInputType.emailAddress,
+            decoration: InputDecoration(
+              hintText: 'Cari email pengguna...',
+              prefixIcon: const Icon(Icons.email_outlined),
+              filled: true,
+              fillColor: AppColors.surfaceVariant,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+            onChanged: (q) {
+              if (q.trim().length >= 3) {
+                ref.read(userSearchProvider.notifier).search(q.trim());
+              } else {
+                ref.read(userSearchProvider.notifier).clear();
+              }
+            },
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 12),
+          searchAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+            ),
+            error: (e, _) => Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'Gagal mencari: ${e.toString().split(']').last.trim()}',
+                style: AppTypography.bodySmall.copyWith(color: AppColors.error),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            data: (users) {
+              if (users.isEmpty && _controller.text.length >= 3) {
+                return Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Center(
+                    child: Text('Email tidak ditemukan',
+                        style: AppTypography.bodyMedium
+                            .copyWith(color: AppColors.textMuted)),
+                  ),
+                );
+              }
+              return ListView.builder(
+                shrinkWrap: true,
+                itemCount: users.length,
+                itemBuilder: (_, i) {
+                  final u = users[i];
+                  return ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+                      child: Text(
+                        u.displayName.isNotEmpty
+                            ? u.displayName[0].toUpperCase()
+                            : u.email[0].toUpperCase(),
+                        style: AppTypography.titleMedium
+                            .copyWith(color: AppColors.primary),
+                      ),
+                    ),
+                    title: Text(u.displayName.isNotEmpty ? u.displayName : u.email,
+                        style: AppTypography.titleMedium),
+                    subtitle: Text(u.email,
+                        style: AppTypography.bodySmall
+                            .copyWith(color: AppColors.textMuted)),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => widget.onSelected(u),
+                  );
+                },
+              );
+            },
+          ),
         ],
       ),
-    ),
-  );
+    );
+  }
 }

@@ -29,6 +29,8 @@ import '../../presentation/features/learn/quiz/quiz_screen.dart';
 import '../../presentation/features/learn/lesson_complete/lesson_complete_screen.dart';
 import '../../presentation/features/learn/daily_quest/daily_quest_modal.dart';
 import '../../presentation/common_widgets/bottom_nav_bar.dart';
+import '../../presentation/features/admin/admin_screen.dart';
+import '../../presentation/features/guide/guide_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
@@ -66,6 +68,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/splash',
         builder: (context, state) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: '/admin',
+        builder: (context, state) => const AdminScreen(),
       ),
       GoRoute(
         path: '/auth/login',
@@ -132,6 +138,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 path: 'daily-quest',
                 builder: (context, state) => const DailyQuestModal(),
               ),
+              GoRoute(
+                path: 'guide',
+                pageBuilder: (context, state) => const MaterialPage(
+                  fullscreenDialog: true,
+                  child: GuideScreen(),
+                ),
+              ),
             ],
           ),
           GoRoute(
@@ -158,23 +171,39 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: 'chat/:partnerId',
-                builder: (context, state) => ChatRoomScreen(
-                  partnerId: state.pathParameters['partnerId']!,
-                ),
+                builder: (context, state) {
+                  final extra = state.extra as Map<String, dynamic>?;
+                  return ChatRoomScreen(
+                    partnerId: state.pathParameters['partnerId']!,
+                    initialPartnerName: extra?['partnerName'] as String?,
+                  );
+                },
               ),
               GoRoute(
                 path: 'voice-call/:callId',
-                pageBuilder: (context, state) => MaterialPage(
-                  fullscreenDialog: true,
-                  child: VoiceCallScreen(callId: state.pathParameters['callId']!),
-                ),
+                pageBuilder: (context, state) {
+                  final extra = state.extra as Map<String, dynamic>?;
+                  return MaterialPage(
+                    fullscreenDialog: true,
+                    child: VoiceCallScreen(
+                      callId: state.pathParameters['callId']!,
+                      partnerName: extra?['partnerName'] as String? ?? '',
+                    ),
+                  );
+                },
               ),
               GoRoute(
                 path: 'video-call/:callId',
-                pageBuilder: (context, state) => MaterialPage(
-                  fullscreenDialog: true,
-                  child: VideoCallScreen(callId: state.pathParameters['callId']!),
-                ),
+                pageBuilder: (context, state) {
+                  final extra = state.extra as Map<String, dynamic>?;
+                  return MaterialPage(
+                    fullscreenDialog: true,
+                    child: VideoCallScreen(
+                      callId: state.pathParameters['callId']!,
+                      partnerName: extra?['partnerName'] as String? ?? '',
+                    ),
+                  );
+                },
               ),
             ],
           ),

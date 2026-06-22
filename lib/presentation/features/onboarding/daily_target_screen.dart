@@ -31,13 +31,15 @@ class DailyTargetScreen extends ConsumerWidget {
     });
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 16),
+              const _OnboardingHeader(step: 3, total: 3),
+              const SizedBox(height: 24),
               Text('Berapa target\nbelajar harianmu?', style: AppTypography.displayMedium),
               const SizedBox(height: 8),
               Text(
@@ -48,7 +50,7 @@ class DailyTargetScreen extends ConsumerWidget {
               Expanded(
                 child: ListView.separated(
                   itemCount: _targets.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final target = _targets[index];
                     final isSelected = state.dailyTargetMinutes == target.minutes;
@@ -114,4 +116,47 @@ class _TargetOption {
   final String label;
   final String description;
   final String emoji;
+}
+
+class _OnboardingHeader extends StatelessWidget {
+  const _OnboardingHeader({required this.step, required this.total});
+  final int step;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            if (step > 1)
+              GestureDetector(
+                onTap: () => context.pop(),
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(color: AppColors.surfaceVariant, shape: BoxShape.circle),
+                  child: const Icon(Icons.arrow_back_rounded, size: 20),
+                ),
+              )
+            else
+              const SizedBox(width: 32),
+            const Spacer(),
+            Image.asset('assets/images/large_logo.png', height: 32),
+            const Spacer(),
+            Text('$step/$total', style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary)),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: step / total,
+            minHeight: 6,
+            backgroundColor: AppColors.divider,
+            valueColor: AlwaysStoppedAnimation(AppColors.primary),
+          ),
+        ),
+      ],
+    );
+  }
 }

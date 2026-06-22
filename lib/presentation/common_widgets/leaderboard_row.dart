@@ -16,7 +16,7 @@ class LeaderboardRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isTop3 = rank <= 3;
-    final medalEmoji = ['🥇', '🥈', '🥉'][rank - 1];
+    final medalEmoji = isTop3 ? ['🥇', '🥈', '🥉'][rank - 1] : '';
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),

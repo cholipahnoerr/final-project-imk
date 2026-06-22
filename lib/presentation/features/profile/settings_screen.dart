@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
-import '../../../core/services/auth_service.dart';
 import '../../../core/services/local_storage_service.dart';
 import '../../../core/services/notification_service.dart';
 
@@ -38,9 +37,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Pengaturan'),
         backgroundColor: AppColors.background,
         surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(color: AppColors.surfaceVariant, shape: BoxShape.circle),
+            child: const Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary, size: 20),
+          ),
+          onPressed: () => context.pop(),
+        ),
+        title: Text('Pengaturan', style: AppTypography.titleLarge.copyWith(color: AppColors.primary, fontWeight: FontWeight.w800)),
+        centerTitle: true,
       ),
       body: ListView(
         children: [
@@ -80,12 +89,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onTap: () => _showAbout(context),
               ),
               _SettingsItem(icon: Icons.privacy_tip_outlined, label: 'Kebijakan Privasi', onTap: () {}),
-              _SettingsItem(
-                icon: Icons.logout_rounded,
-                label: 'Keluar',
-                color: AppColors.error,
-                onTap: () => _confirmSignOut(context),
-              ),
             ],
           ),
           const SizedBox(height: 32),
@@ -96,30 +99,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
           const SizedBox(height: 16),
-        ],
-      ),
-    );
-  }
-
-  void _confirmSignOut(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Keluar?'),
-        content: const Text('Kamu akan keluar dari akun Hayyarabic.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await ref.read(authRepositoryProvider).signOut();
-              if (context.mounted) context.go('/auth/login');
-            },
-            child: Text('Keluar', style: TextStyle(color: AppColors.error)),
-          ),
         ],
       ),
     );
@@ -187,19 +166,16 @@ class _SettingsItem extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
-    this.color,
   });
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  final Color? color;
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? AppColors.textPrimary;
     return ListTile(
-      leading: Icon(icon, color: c, size: 22),
-      title: Text(label, style: AppTypography.bodyLarge.copyWith(color: c)),
+      leading: Icon(icon, color: AppColors.textPrimary, size: 22),
+      title: Text(label, style: AppTypography.bodyLarge.copyWith(color: AppColors.textPrimary)),
       trailing: Icon(Icons.chevron_right_rounded, color: AppColors.textMuted, size: 20),
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),

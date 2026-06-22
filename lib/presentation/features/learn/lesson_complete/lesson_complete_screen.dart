@@ -41,7 +41,7 @@ class LessonCompleteScreen extends StatelessWidget {
                 child: Lottie.network(
                   'https://assets5.lottiefiles.com/packages/lf20_touohxv0.json',
                   fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Center(
+                  errorBuilder: (_, _, _) => const Center(
                     child: Text('🐪', style: TextStyle(fontSize: 80)),
                   ),
                 ),

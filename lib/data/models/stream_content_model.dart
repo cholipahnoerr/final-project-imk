@@ -7,7 +7,9 @@ class WordOfDay {
     required this.partOfSpeech,
     required this.exampleArabic,
     required this.exampleTranslation,
+    this.level = 1,
     this.audioUrl,
+    this.scheduledDate,
   });
 
   final String id;
@@ -17,7 +19,58 @@ class WordOfDay {
   final String partOfSpeech;
   final String exampleArabic;
   final String exampleTranslation;
+  final int level;
   final String? audioUrl;
+  final String? scheduledDate; // format: "YYYY-MM-DD"
+
+  factory WordOfDay.fromMap(Map<String, dynamic> map, String id) {
+    return WordOfDay(
+      id: id,
+      arabic: map['arabic'] as String? ?? '',
+      transliteration: map['transliteration'] as String? ?? '',
+      translation: map['translation'] as String? ?? '',
+      partOfSpeech: map['partOfSpeech'] as String? ?? '',
+      exampleArabic: map['exampleArabic'] as String? ?? '',
+      exampleTranslation: map['exampleTranslation'] as String? ?? '',
+      level: map['level'] as int? ?? 1,
+      audioUrl: map['audioUrl'] as String?,
+      scheduledDate: map['scheduledDate'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'arabic': arabic,
+      'transliteration': transliteration,
+      'translation': translation,
+      'partOfSpeech': partOfSpeech,
+      'exampleArabic': exampleArabic,
+      'exampleTranslation': exampleTranslation,
+      'level': level,
+      'audioUrl': audioUrl,
+      'scheduledDate': scheduledDate,
+    };
+  }
+}
+
+class SocialPost {
+  const SocialPost({
+    required this.id,
+    required this.userName,
+    required this.content,
+    required this.streakDays,
+    required this.timeAgo,
+    this.userAvatar,
+    this.isLiked = false,
+  });
+
+  final String id;
+  final String userName;
+  final String content;
+  final int streakDays;
+  final String timeAgo;
+  final String? userAvatar;
+  final bool isLiked;
 }
 
 class CultureTrivia {
@@ -36,6 +89,31 @@ class CultureTrivia {
   final String content;
   final List<VocabEntry> vocabulary; // Arabic words highlighted in article
   final String? imageUrl;
+
+  factory CultureTrivia.fromMap(Map<String, dynamic> map, String id) {
+    final rawVocab = map['vocabulary'] as List<dynamic>? ?? [];
+    final vocabulary = rawVocab
+        .map((e) => VocabEntry.fromMap(e as Map<String, dynamic>))
+        .toList();
+    return CultureTrivia(
+      id: id,
+      title: map['title'] as String? ?? '',
+      subtitle: map['subtitle'] as String? ?? '',
+      content: map['content'] as String? ?? '',
+      vocabulary: vocabulary,
+      imageUrl: map['imageUrl'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'title': title,
+      'subtitle': subtitle,
+      'content': content,
+      'vocabulary': vocabulary.map((v) => v.toMap()).toList(),
+      'imageUrl': imageUrl,
+    };
+  }
 }
 
 class VocabEntry {
@@ -43,19 +121,60 @@ class VocabEntry {
   final String arabic;
   final String translation;
   final String? transliteration;
+
+  factory VocabEntry.fromMap(Map<String, dynamic> map) {
+    return VocabEntry(
+      arabic: map['arabic'] as String? ?? '',
+      translation: map['translation'] as String? ?? '',
+      transliteration: map['transliteration'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'arabic': arabic,
+      'translation': translation,
+      'transliteration': transliteration,
+    };
+  }
 }
 
 // Static content — replaced by Firestore in production
 class StreamContent {
   static WordOfDay get wordOfDay => const WordOfDay(
     id: 'wod-001',
-    arabic: 'صَبَاحٌ',
-    transliteration: 'ṣabāḥun',
-    translation: 'Pagi',
-    partOfSpeech: 'Kata Benda (Isim)',
-    exampleArabic: 'صَبَاحُ الْخَيْرِ',
-    exampleTranslation: 'Selamat pagi',
+    arabic: 'مَرْحَبًا',
+    transliteration: 'Marhaban',
+    translation: '"Selamat Datang"',
+    partOfSpeech: 'Kata Seru (Interjeksi)',
+    exampleArabic: 'مَرْحَبًا بِكَ',
+    exampleTranslation: 'Selamat datang kepadamu',
+    level: 1,
   );
+
+  static const List<SocialPost> socialPosts = [
+    SocialPost(
+      id: 'post-1',
+      userName: 'Ahmad',
+      content: 'Berhasil mencapai 10 hari berturut-turut! Konsistensi adalah kuncinya 🚀',
+      streakDays: 10,
+      timeAgo: '2j lalu',
+    ),
+    SocialPost(
+      id: 'post-2',
+      userName: 'Layla',
+      content: 'Baru saja menguasai 100 kata kerja paling umum! Merasa percaya diri untuk pelajaran selanjutnya 📖',
+      streakDays: 10,
+      timeAgo: '2j lalu',
+    ),
+    SocialPost(
+      id: 'post-3',
+      userName: 'Rafi',
+      content: 'Akhirnya bisa membaca surah pendek tanpa harakat. Alhamdulillah! 🤲',
+      streakDays: 5,
+      timeAgo: '4j lalu',
+    ),
+  ];
 
   static const List<CultureTrivia> triviaList = [
     CultureTrivia(

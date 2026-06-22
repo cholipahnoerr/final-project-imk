@@ -45,22 +45,31 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primary,
+      backgroundColor: AppColors.background,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // TODO: Replace with actual logo asset from Figma
-            const Icon(Icons.language, size: 80, color: Colors.white),
-            const SizedBox(height: 16),
-            Text(
-              'حَيَّ عَرَبِيك',
-              style: AppTypography.displayLarge.copyWith(color: Colors.white),
+            Image.asset(
+              'assets/images/large_logo.png',
+              height: 120,
+              fit: BoxFit.contain,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 20),
             Text(
               'Hayyarabic',
-              style: AppTypography.headlineMedium.copyWith(color: Colors.white70),
+              style: AppTypography.headlineLarge.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'هَيَّا نَتَعَلَّمُ الْعَرَبِيَّةَ',
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
+              textDirection: TextDirection.rtl,
             ),
           ],
         ),

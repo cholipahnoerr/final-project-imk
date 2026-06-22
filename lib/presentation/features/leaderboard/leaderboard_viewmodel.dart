@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/services/auth_service.dart';
 import '../../../data/models/leaderboard_entry_model.dart';
-import '../../../data/models/user_model.dart';
 import '../../features/home/home_viewmodel.dart';
 
 class LeaderboardState {
@@ -14,71 +14,55 @@ class LeaderboardState {
   final League league;
   final List<LeaderboardEntry> entries;
   final int currentUserRank;
-  final int xpToPromotion; // XP needed to reach top 10 from current position
+  final int xpToPromotion;
 }
 
-class LeaderboardViewModel extends Notifier<LeaderboardState> {
-  @override
-  LeaderboardState build() {
-    final user = ref.watch(currentUserProvider).valueOrNull;
-    return _computeState(user);
+final leaderboardProvider =
+    StreamProvider.autoDispose<LeaderboardState>((ref) {
+  final userAsync = ref.watch(currentUserProvider);
+  final user = userAsync.valueOrNull;
+
+  if (user == null) {
+    return Stream.value(LeaderboardState(
+      league: League.bronze,
+      entries: const [],
+      currentUserRank: 0,
+      xpToPromotion: 0,
+    ));
   }
 
-  LeaderboardState _computeState(UserModel? user) {
-    final league = LeagueExtension.fromString(user?.currentLeague ?? 'bronze');
-    final currentUserXp = user?.leagueXpThisWeek ?? 0;
-    final currentUserName = user?.displayName ?? 'Kamu';
+  final league = LeagueExtension.fromString(user.currentLeague);
 
-    final entries = _generateEntries(currentUserXp, currentUserName, league);
+  return ref
+      .watch(firestoreDataSourceProvider)
+      .watchLeaderboard(user.currentLeague)
+      .map((users) {
+    final entries = users
+        .map((u) => LeaderboardEntry(
+              uid: u.uid,
+              displayName: u.displayName.isNotEmpty ? u.displayName : 'Pengguna',
+              photoUrl: u.photoUrl,
+              xpThisWeek: u.leagueXpThisWeek,
+              isCurrentUser: u.uid == user.uid,
+            ))
+        .toList();
+
+    // sort already done in datasource, but ensure consistency
     entries.sort((a, b) => b.xpThisWeek.compareTo(a.xpThisWeek));
 
-    final rank = entries.indexWhere((e) => e.isCurrentUser) + 1;
-    final top10Xp = entries.length >= 10 ? entries[9].xpThisWeek : 0;
-    final xpNeeded = (top10Xp - currentUserXp).clamp(0, 9999);
+    final rankIndex = entries.indexWhere((e) => e.isCurrentUser);
+    final currentUserRank = rankIndex >= 0 ? rankIndex + 1 : entries.length + 1;
+
+    final top10Xp =
+        entries.length >= 10 ? entries[9].xpThisWeek : 0;
+    final xpNeeded =
+        (top10Xp - user.leagueXpThisWeek).clamp(0, 99999);
 
     return LeaderboardState(
       league: league,
       entries: entries,
-      currentUserRank: rank,
+      currentUserRank: currentUserRank,
       xpToPromotion: xpNeeded,
     );
-  }
-
-  // Generates realistic mock entries with the current user mixed in
-  List<LeaderboardEntry> _generateEntries(int userXp, String userName, League league) {
-    final baseXp = switch (league) {
-      League.bronze  => 800,
-      League.silver  => 1500,
-      League.gold    => 2500,
-      League.diamond => 4000,
-    };
-
-    final mockNames = [
-      'Ahmad Fauzi', 'Siti Rahayu', 'Budi Santoso', 'Dewi Lestari',
-      'Reza Pratama', 'Nurul Hidayah', 'Fajar Kurniawan', 'Indah Permata',
-      'Rizky Ramadhan', 'Lena Susanti', 'Dani Wahyudi', 'Mega Putri',
-      'Hendra Gunawan', 'Yuli Astuti',
-    ];
-
-    final entries = <LeaderboardEntry>[];
-    for (int i = 0; i < mockNames.length; i++) {
-      entries.add(LeaderboardEntry(
-        uid: 'mock_$i',
-        displayName: mockNames[i],
-        xpThisWeek: baseXp - (i * (baseXp ~/ 15)),
-      ));
-    }
-
-    entries.add(LeaderboardEntry(
-      uid: 'current_user',
-      displayName: userName,
-      xpThisWeek: userXp,
-      isCurrentUser: true,
-    ));
-
-    return entries;
-  }
-}
-
-final leaderboardViewModelProvider =
-    NotifierProvider<LeaderboardViewModel, LeaderboardState>(LeaderboardViewModel.new);
+  });
+});

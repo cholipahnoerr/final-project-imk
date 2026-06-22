@@ -11,6 +11,7 @@ class QuizQuestion {
     this.correctAnswer = '',
     this.words = const [],
     this.hint,
+    this.order = 0,
   });
 
   final String id;
@@ -22,6 +23,41 @@ class QuizQuestion {
   final String correctAnswer;    // Expected answer string
   final List<String> words;      // For word arrangement (shuffled words)
   final String? hint;            // Grammar hint shown in feedback
+  final int order;               // For Firestore ordering
+
+  factory QuizQuestion.fromMap(Map<String, dynamic> map, String id) {
+    final typeStr = map['type'] as String? ?? 'multipleChoice';
+    final type = QuestionType.values.firstWhere(
+      (e) => e.name == typeStr,
+      orElse: () => QuestionType.multipleChoice,
+    );
+    return QuizQuestion(
+      id: id,
+      type: type,
+      prompt: map['prompt'] as String? ?? '',
+      arabicText: map['arabicText'] as String?,
+      audioUrl: map['audioUrl'] as String?,
+      options: List<String>.from(map['options'] as List<dynamic>? ?? []),
+      correctAnswer: map['correctAnswer'] as String? ?? '',
+      words: List<String>.from(map['words'] as List<dynamic>? ?? []),
+      hint: map['hint'] as String?,
+      order: map['order'] as int? ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'type': type.name,
+      'prompt': prompt,
+      'arabicText': arabicText,
+      'audioUrl': audioUrl,
+      'options': options,
+      'correctAnswer': correctAnswer,
+      'words': words,
+      'hint': hint,
+      'order': order,
+    };
+  }
 }
 
 // Static Arabic lesson data — replaced by Firestore in Sprint 3.5

@@ -36,7 +36,11 @@ dependencies:
 
   # Audio
   just_audio: ^0.9.42
-  # record & audio_waveforms ditambahkan di Sprint 5 (voice note chat)
+  record: ^6.2.1
+  path_provider: ^2.1.4
+
+  # Video/Voice Call
+  agora_rtc_engine: ^6.5.0
 
   # Local Storage
   hive_flutter: ^1.1.0
@@ -60,12 +64,21 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.3
   build_runner: ^2.4.14
   freezed: ^3.0.0
   json_serializable: ^6.9.3
   riverpod_generator: ^2.6.1
   custom_lint: ^0.7.5
   riverpod_lint: ^2.6.1
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/images/large_logo.png"
+  background_color: "#FFF8F0"
+  adaptive_icon_background: "#FFF8F0"
+  adaptive_icon_foreground: "assets/images/large_logo.png"
 
 flutter:
   uses-material-design: true

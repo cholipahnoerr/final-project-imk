@@ -4,6 +4,7 @@ class UserModel {
     required this.email,
     required this.displayName,
     this.photoUrl,
+    this.username,
     this.onboardingCompleted = false,
     this.learningGoal,
     this.proficiencyLevel,
@@ -13,15 +14,19 @@ class UserModel {
     this.hearts = 5,
     this.currentStreak = 0,
     this.longestStreak = 0,
+    this.wordsLearned = 0,
     this.lastPracticeDate,
     this.currentLeague = 'bronze',
     this.leagueXpThisWeek = 0,
+    this.isAdmin = false,
+    this.completedNodes = const [],
   });
 
   final String uid;
   final String email;
   final String displayName;
   final String? photoUrl;
+  final String? username;
   final bool onboardingCompleted;
   final String? learningGoal;
   final String? proficiencyLevel;
@@ -31,9 +36,19 @@ class UserModel {
   final int hearts;
   final int currentStreak;
   final int longestStreak;
+  final int wordsLearned;
   final String? lastPracticeDate;
   final String currentLeague;
   final int leagueXpThisWeek;
+  final bool isAdmin;
+  /// List of completed node keys in "unitId/nodeId" format.
+  final List<String> completedNodes;
+
+  // Derived handle: @namapengguna (from username field or displayName)
+  String get handle {
+    if (username != null && username!.isNotEmpty) return '@$username';
+    return '@${displayName.toLowerCase().replaceAll(' ', '_')}';
+  }
 
   factory UserModel.fromMap(Map<String, dynamic> map, String uid) {
     return UserModel(
@@ -41,6 +56,7 @@ class UserModel {
       email: map['email'] as String? ?? '',
       displayName: map['displayName'] as String? ?? '',
       photoUrl: map['photoUrl'] as String?,
+      username: map['username'] as String?,
       onboardingCompleted: map['onboardingCompleted'] as bool? ?? false,
       learningGoal: map['learningGoal'] as String?,
       proficiencyLevel: map['proficiencyLevel'] as String?,
@@ -50,9 +66,12 @@ class UserModel {
       hearts: map['hearts'] as int? ?? 5,
       currentStreak: map['currentStreak'] as int? ?? 0,
       longestStreak: map['longestStreak'] as int? ?? 0,
+      wordsLearned: map['wordsLearned'] as int? ?? 0,
       lastPracticeDate: map['lastPracticeDate'] as String?,
       currentLeague: map['currentLeague'] as String? ?? 'bronze',
       leagueXpThisWeek: map['leagueXpThisWeek'] as int? ?? 0,
+      isAdmin: map['isAdmin'] as bool? ?? false,
+      completedNodes: List<String>.from(map['completedNodes'] as List<dynamic>? ?? []),
     );
   }
 
@@ -61,6 +80,7 @@ class UserModel {
       'email': email,
       'displayName': displayName,
       'photoUrl': photoUrl,
+      'username': username,
       'onboardingCompleted': onboardingCompleted,
       'learningGoal': learningGoal,
       'proficiencyLevel': proficiencyLevel,
@@ -70,15 +90,19 @@ class UserModel {
       'hearts': hearts,
       'currentStreak': currentStreak,
       'longestStreak': longestStreak,
+      'wordsLearned': wordsLearned,
       'lastPracticeDate': lastPracticeDate,
       'currentLeague': currentLeague,
       'leagueXpThisWeek': leagueXpThisWeek,
+      'isAdmin': isAdmin,
+      'completedNodes': completedNodes,
     };
   }
 
   UserModel copyWith({
     String? displayName,
     String? photoUrl,
+    String? username,
     bool? onboardingCompleted,
     String? learningGoal,
     String? proficiencyLevel,
@@ -88,15 +112,19 @@ class UserModel {
     int? hearts,
     int? currentStreak,
     int? longestStreak,
+    int? wordsLearned,
     String? lastPracticeDate,
     String? currentLeague,
     int? leagueXpThisWeek,
+    bool? isAdmin,
+    List<String>? completedNodes,
   }) {
     return UserModel(
       uid: uid,
       email: email,
       displayName: displayName ?? this.displayName,
       photoUrl: photoUrl ?? this.photoUrl,
+      username: username ?? this.username,
       onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
       learningGoal: learningGoal ?? this.learningGoal,
       proficiencyLevel: proficiencyLevel ?? this.proficiencyLevel,
@@ -106,9 +134,12 @@ class UserModel {
       hearts: hearts ?? this.hearts,
       currentStreak: currentStreak ?? this.currentStreak,
       longestStreak: longestStreak ?? this.longestStreak,
+      wordsLearned: wordsLearned ?? this.wordsLearned,
       lastPracticeDate: lastPracticeDate ?? this.lastPracticeDate,
       currentLeague: currentLeague ?? this.currentLeague,
       leagueXpThisWeek: leagueXpThisWeek ?? this.leagueXpThisWeek,
+      isAdmin: isAdmin ?? this.isAdmin,
+      completedNodes: completedNodes ?? this.completedNodes,
     );
   }
 }

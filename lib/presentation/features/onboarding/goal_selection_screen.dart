@@ -24,17 +24,19 @@ class GoalSelectionScreen extends ConsumerWidget {
     final vm = ref.read(onboardingViewModelProvider.notifier);
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 16),
+              const _OnboardingHeader(step: 1, total: 3),
+              const SizedBox(height: 24),
               Text('Apa tujuan belajarmu?', style: AppTypography.displayMedium),
               const SizedBox(height: 8),
               Text(
-                'Pilih satu untuk menyesuaikan pengalaman belajarmu.',
+                'Pilih satu atau lebih untuk menyesuaikan pengalaman belajarmu.',
                 style: AppTypography.bodyLarge.copyWith(color: AppColors.textSecondary),
               ),
               const SizedBox(height: 32),
@@ -49,9 +51,9 @@ class GoalSelectionScreen extends ConsumerWidget {
                   itemCount: _goals.length,
                   itemBuilder: (context, index) {
                     final goal = _goals[index];
-                    final isSelected = state.selectedGoal == goal.id;
+                    final isSelected = state.selectedGoals.contains(goal.id);
                     return GestureDetector(
-                      onTap: () => vm.setGoal(goal.id),
+                      onTap: () => vm.toggleGoal(goal.id),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 150),
                         decoration: BoxDecoration(
@@ -91,7 +93,7 @@ class GoalSelectionScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               PrimaryButton(
                 label: 'Lanjut',
-                onPressed: state.selectedGoal == null
+                onPressed: state.selectedGoals.isEmpty
                     ? null
                     : () => context.push('/onboarding/level'),
               ),
@@ -108,4 +110,47 @@ class _GoalOption {
   final String id;
   final String label;
   final IconData icon;
+}
+
+class _OnboardingHeader extends StatelessWidget {
+  const _OnboardingHeader({required this.step, required this.total});
+  final int step;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            if (step > 1)
+              GestureDetector(
+                onTap: () => context.pop(),
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(color: AppColors.surfaceVariant, shape: BoxShape.circle),
+                  child: const Icon(Icons.arrow_back_rounded, size: 20),
+                ),
+              )
+            else
+              const SizedBox(width: 32),
+            const Spacer(),
+            Image.asset('assets/images/large_logo.png', height: 32),
+            const Spacer(),
+            Text('$step/$total', style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary)),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: step / total,
+            minHeight: 6,
+            backgroundColor: AppColors.divider,
+            valueColor: AlwaysStoppedAnimation(AppColors.primary),
+          ),
+        ),
+      ],
+    );
+  }
 }

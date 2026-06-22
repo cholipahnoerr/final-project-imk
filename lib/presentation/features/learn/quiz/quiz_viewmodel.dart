@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/services/auth_service.dart';
 import '../../../../data/models/quiz_question_model.dart';
 import '../../../../data/repositories/gamification_repository.dart';
 import '../../../features/home/home_viewmodel.dart';
@@ -81,11 +82,20 @@ class QuizViewModel extends FamilyNotifier<QuizState, ({String unitId, String le
     return QuizState(unitId: arg.unitId, lessonId: arg.lessonId);
   }
 
-  void _loadQuestions(String unitId, String lessonId) {
-    final questions = getLessonQuestions(unitId, lessonId);
-    Future.microtask(() {
-      state = state.copyWith(phase: QuizPhase.question, questions: questions);
-    });
+  void _loadQuestions(String unitId, String lessonId) async {
+    try {
+      final ds = ref.read(firestoreDataSourceProvider);
+      final questions = await ds.getQuestions(unitId, lessonId);
+      if (questions.isNotEmpty) {
+        state = state.copyWith(phase: QuizPhase.question, questions: questions);
+      } else {
+        final fallback = getLessonQuestions(unitId, lessonId);
+        state = state.copyWith(phase: QuizPhase.question, questions: fallback);
+      }
+    } catch (_) {
+      final fallback = getLessonQuestions(unitId, lessonId);
+      state = state.copyWith(phase: QuizPhase.question, questions: fallback);
+    }
   }
 
   void selectAnswer(String answer) {
@@ -137,12 +147,18 @@ class QuizViewModel extends FamilyNotifier<QuizState, ({String unitId, String le
   void _persistLessonComplete() {
     final user = ref.read(currentUserProvider).valueOrNull;
     if (user == null) return;
-    final isPerfect = state.hearts == 5; // no hearts lost during this lesson = perfect
+    final isPerfect = state.hearts == 5;
     ref.read(gamificationRepositoryProvider).onLessonComplete(
       user: user,
       earnedXp: state.earnedXp,
       isPerfect: isPerfect,
       correctCount: state.correctCount,
+    );
+    // Mark node complete so next node unlocks
+    ref.read(firestoreDataSourceProvider).markNodeComplete(
+      user.uid,
+      state.unitId,
+      state.lessonId,
     );
   }
 }

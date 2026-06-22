@@ -1,90 +1,123 @@
+import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/services/agora_service.dart';
 
-class VideoCallScreen extends StatefulWidget {
-  const VideoCallScreen({super.key, required this.callId});
+class VideoCallScreen extends ConsumerStatefulWidget {
+  const VideoCallScreen({
+    super.key,
+    required this.callId,
+    required this.partnerName,
+  });
   final String callId;
+  final String partnerName;
 
   @override
-  State<VideoCallScreen> createState() => _VideoCallScreenState();
+  ConsumerState<VideoCallScreen> createState() => _VideoCallScreenState();
 }
 
-class _VideoCallScreenState extends State<VideoCallScreen> {
-  bool _isMuted = false;
-  bool _isCameraOff = false;
-  int _seconds = 0;
-
+class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
   @override
   void initState() {
     super.initState();
-    _startTimer();
-  }
-
-  void _startTimer() {
-    Future.doWhile(() async {
-      await Future.delayed(const Duration(seconds: 1));
-      if (!mounted) return false;
-      setState(() => _seconds++);
-      return mounted;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref
+          .read(agoraCallProvider.notifier)
+          .init(channelId: widget.callId, isVideo: true);
     });
   }
 
-  String get _timeFormatted {
-    final m = (_seconds ~/ 60).toString().padLeft(2, '0');
-    final s = (_seconds % 60).toString().padLeft(2, '0');
+  String _formatElapsed(int seconds) {
+    final m = (seconds ~/ 60).toString().padLeft(2, '0');
+    final s = (seconds % 60).toString().padLeft(2, '0');
     return '$m:$s';
   }
 
   @override
   Widget build(BuildContext context) {
+    final call = ref.watch(agoraCallProvider);
+    final engine = ref.read(agoraCallProvider.notifier).engine;
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Remote video (full screen placeholder)
-          Container(
-            width: double.infinity,
-            height: double.infinity,
-            color: const Color(0xFF1A1A2E),
-            child: const Center(
-              child: Icon(Icons.person, size: 120, color: Colors.white24),
+          // Remote video (full screen)
+          if (call.remoteUid != null && engine != null)
+            AgoraVideoView(
+              controller: VideoViewController.remote(
+                rtcEngine: engine,
+                canvas: VideoCanvas(uid: call.remoteUid!),
+                connection: RtcConnection(channelId: widget.callId),
+              ),
+            )
+          else
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.person_rounded, size: 80, color: Colors.white38),
+                  const SizedBox(height: 12),
+                  Text(
+                    call.isJoined ? 'Menunggu...' : 'Menghubungkan...',
+                    style: AppTypography.bodyLarge.copyWith(color: Colors.white54),
+                  ),
+                ],
+              ),
             ),
-          ),
-          // Local video (PIP placeholder)
-          Positioned(
-            top: 60,
-            right: 16,
-            child: Container(
+
+          // Local video (picture-in-picture)
+          if (!call.isCameraOff && engine != null)
+            Positioned(
+              right: 16,
+              top: MediaQuery.of(context).padding.top + 16,
               width: 100,
               height: 140,
-              decoration: BoxDecoration(
-                color: const Color(0xFF2A2A3E),
+              child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white24),
+                child: AgoraVideoView(
+                  controller: VideoViewController(
+                    rtcEngine: engine,
+                    canvas: const VideoCanvas(uid: 0),
+                  ),
+                ),
               ),
-              child: _isCameraOff
-                  ? const Icon(Icons.videocam_off, color: Colors.white54)
-                  : const Icon(Icons.person, color: Colors.white54),
             ),
-          ),
-          // Timer
+
+          // Timer overlay
           Positioned(
-            top: 60,
+            top: MediaQuery.of(context).padding.top + 16,
             left: 0,
             right: 0,
             child: Center(
-              child: Text(_timeFormatted, style: AppTypography.bodyLarge.copyWith(color: Colors.white70)),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black45,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  call.remoteUid != null ? _formatElapsed(call.elapsed) : 'Menunggu...',
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                ),
+              ),
             ),
           ),
-          // Controls
+
+          // Controls bottom bar
           Positioned(
             bottom: 0,
             left: 0,
             right: 0,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
+              padding: EdgeInsets.only(
+                left: 40,
+                right: 40,
+                top: 20,
+                bottom: MediaQuery.of(context).padding.bottom + 20,
+              ),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
@@ -93,27 +126,30 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                 ),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   _VideoCallButton(
-                    icon: _isMuted ? Icons.mic_off : Icons.mic,
-                    onTap: () => setState(() => _isMuted = !_isMuted),
+                    icon: call.isMuted ? Icons.mic_off_rounded : Icons.mic_rounded,
+                    label: call.isMuted ? 'Unmute' : 'Mute',
+                    active: call.isMuted,
+                    onTap: () => ref.read(agoraCallProvider.notifier).toggleMute(),
                   ),
                   _VideoCallButton(
-                    icon: Icons.call_end,
-                    color: AppColors.error,
-                    size: 64,
-                    onTap: () => context.pop(),
-                  ),
-                  _VideoCallButton(
-                    icon: _isCameraOff ? Icons.videocam_off : Icons.videocam,
-                    onTap: () => setState(() => _isCameraOff = !_isCameraOff),
-                  ),
-                  _VideoCallButton(
-                    icon: Icons.flip_camera_android,
-                    onTap: () {
-                      // TODO: Switch camera
+                    icon: Icons.call_end_rounded,
+                    label: 'Tutup',
+                    isEndCall: true,
+                    onTap: () async {
+                      await ref.read(agoraCallProvider.notifier).endCall();
+                      if (context.mounted) context.pop();
                     },
+                  ),
+                  _VideoCallButton(
+                    icon: call.isCameraOff
+                        ? Icons.videocam_off_rounded
+                        : Icons.videocam_rounded,
+                    label: call.isCameraOff ? 'Kamera Off' : 'Kamera',
+                    active: call.isCameraOff,
+                    onTap: () => ref.read(agoraCallProvider.notifier).toggleCamera(),
                   ),
                 ],
               ),
@@ -126,26 +162,43 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
 }
 
 class _VideoCallButton extends StatelessWidget {
-  const _VideoCallButton({required this.icon, required this.onTap, this.color, this.size = 52});
+  const _VideoCallButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.active = false,
+    this.isEndCall = false,
+  });
 
   final IconData icon;
+  final String label;
   final VoidCallback onTap;
-  final Color? color;
-  final double size;
+  final bool active;
+  final bool isEndCall;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: color ?? Colors.white24,
-          shape: BoxShape.circle,
+    final bg = isEndCall
+        ? Colors.red
+        : active
+            ? Colors.red.withValues(alpha: 0.8)
+            : Colors.white24;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+          onTap: onTap,
+          child: Container(
+            width: isEndCall ? 64 : 52,
+            height: isEndCall ? 64 : 52,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: bg),
+            child: Icon(icon, color: Colors.white, size: isEndCall ? 30 : 24),
+          ),
         ),
-        child: Icon(icon, color: Colors.white, size: size * 0.45),
-      ),
+        const SizedBox(height: 6),
+        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+      ],
     );
   }
 }

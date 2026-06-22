@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/datasources/remote/firestore_datasource.dart';
 import '../../data/models/user_model.dart';
@@ -69,8 +70,10 @@ final firebaseAuthProvider = Provider<FirebaseAuth>((ref) => FirebaseAuth.instan
 
 final firestoreProvider = Provider<FirebaseFirestore>((ref) => FirebaseFirestore.instance);
 
+final firebaseStorageProvider = Provider<FirebaseStorage>((ref) => FirebaseStorage.instance);
+
 final firestoreDataSourceProvider = Provider<FirestoreDataSource>((ref) {
-  return FirestoreDataSource(ref.read(firestoreProvider));
+  return FirestoreDataSource(ref.read(firestoreProvider), ref.read(firebaseStorageProvider));
 });
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {

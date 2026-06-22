@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem -Path \"D:\\\\fpimk\\\\lib\\\\data\" -Directory | ForEach-Object { $_.Name })",
+      "PowerShell(Get-ChildItem -Path \"D:\\\\fpimk\\\\lib\\\\core\\\\services\" | ForEach-Object { $_.Name })",
+      "PowerShell(Get-ChildItem -Path \"D:\\\\fpimk\\\\lib\\\\data\\\\models\" | ForEach-Object { $_.Name })",
+      "mcp__claude_ai_Figma__get_metadata",
+      "mcp__claude_ai_Figma__get_screenshot",
+      "Bash(curl -o figma_beranda.png \"https://www.figma.com/api/mcp/asset/f48d8af5-7200-445b-b591-c12cf05b9bb0\")",
+      "Bash(curl -o figma_kabar.png \"https://www.figma.com/api/mcp/asset/f53a5c9f-804e-4da5-a4cd-d742e577bad2\")",
+      "Bash(curl -o figma_profile.png \"https://www.figma.com/api/mcp/asset/c6875f7b-4125-463f-afa8-c240c9d6b486\")",
+      "mcp__claude_ai_Figma__get_design_context",
+      "PowerShell(Get-ChildItem \"D:\\\\fpimk\\\\assets\" -Recurse -Force | ForEach-Object { $_.FullName })",
+      "Bash(flutter analyze *)"
+    ]
+  }
+}

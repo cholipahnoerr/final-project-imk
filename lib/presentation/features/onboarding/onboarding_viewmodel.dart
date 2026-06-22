@@ -3,7 +3,7 @@ import '../../../core/services/auth_service.dart';
 
 class OnboardingState {
   const OnboardingState({
-    this.selectedGoal,
+    this.selectedGoals = const [],
     this.selectedLevel,
     this.dailyTargetMinutes = 10,
     this.isLoading = false,
@@ -11,7 +11,7 @@ class OnboardingState {
     this.isCompleted = false,
   });
 
-  final String? selectedGoal;
+  final List<String> selectedGoals;
   final String? selectedLevel;
   final int dailyTargetMinutes;
   final bool isLoading;
@@ -19,7 +19,7 @@ class OnboardingState {
   final bool isCompleted;
 
   OnboardingState copyWith({
-    String? selectedGoal,
+    List<String>? selectedGoals,
     String? selectedLevel,
     int? dailyTargetMinutes,
     bool? isLoading,
@@ -27,7 +27,7 @@ class OnboardingState {
     bool? isCompleted,
   }) {
     return OnboardingState(
-      selectedGoal: selectedGoal ?? this.selectedGoal,
+      selectedGoals: selectedGoals ?? this.selectedGoals,
       selectedLevel: selectedLevel ?? this.selectedLevel,
       dailyTargetMinutes: dailyTargetMinutes ?? this.dailyTargetMinutes,
       isLoading: isLoading ?? this.isLoading,
@@ -41,8 +41,14 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
   @override
   OnboardingState build() => const OnboardingState();
 
-  void setGoal(String goal) {
-    state = state.copyWith(selectedGoal: goal);
+  void toggleGoal(String goal) {
+    final current = List<String>.from(state.selectedGoals);
+    if (current.contains(goal)) {
+      current.remove(goal);
+    } else {
+      current.add(goal);
+    }
+    state = state.copyWith(selectedGoals: current);
   }
 
   void setLevel(String level) {
@@ -54,14 +60,14 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
   }
 
   Future<void> completeOnboarding() async {
-    if (state.selectedGoal == null || state.selectedLevel == null) return;
+    if (state.selectedGoals.isEmpty || state.selectedLevel == null) return;
     state = state.copyWith(isLoading: true);
     try {
       final uid = ref.read(firebaseAuthProvider).currentUser?.uid;
       if (uid == null) throw Exception('User tidak ditemukan');
       await ref.read(firestoreDataSourceProvider).saveOnboardingData(
             uid: uid,
-            learningGoal: state.selectedGoal!,
+            learningGoal: state.selectedGoals.join(','),
             proficiencyLevel: state.selectedLevel!,
             dailyTargetMinutes: state.dailyTargetMinutes,
           );

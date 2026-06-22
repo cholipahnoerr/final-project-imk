@@ -81,7 +81,7 @@ class MultipleChoiceWidget extends StatelessWidget {
                       textDirection: _isArabic(option) ? TextDirection.rtl : TextDirection.ltr,
                     ),
                   ),
-                  if (trailing != null) trailing,
+                  ?trailing,
                 ],
               ),
             ),

@@ -81,7 +81,7 @@ class _PlacementTestScreenState extends State<PlacementTestScreen> {
               Expanded(
                 child: ListView.separated(
                   itemCount: options.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final option = options[index];
                     final isSelected = _selectedAnswer == option;
@@ -95,7 +95,7 @@ class _PlacementTestScreenState extends State<PlacementTestScreen> {
                             color: isSelected ? AppColors.primary : AppColors.border,
                             width: isSelected ? 2 : 1,
                           ),
-                          color: isSelected ? AppColors.primary.withOpacity(0.08) : AppColors.surface,
+                          color: isSelected ? AppColors.primary.withValues(alpha: 0.08) : AppColors.surface,
                         ),
                         child: Text(option, style: AppTypography.bodyLarge),
                       ),
